@@ -113,6 +113,30 @@ class TestLLMGenerator:
         questions = LLMGenerator.generate_suggested_questions_after_answer("tenant_id", "histories")
         assert questions == []
 
+    def test_generate_suggested_questions_uses_custom_max_tokens(self, mock_model_instance):
+        mock_response = MagicMock()
+        mock_response.message.get_text_content.return_value = '["Question 1?"]'
+        mock_model_instance.invoke_llm.return_value = mock_response
+
+        with patch("core.llm_generator.llm_generator.SUGGESTED_QUESTIONS_MAX_TOKENS", 512):
+            LLMGenerator.generate_suggested_questions_after_answer("tenant_id", "histories")
+            call_kwargs = mock_model_instance.invoke_llm.call_args
+            assert call_kwargs is not None
+            model_parameters = call_kwargs.kwargs.get("model_parameters", {})
+            assert model_parameters.get("max_tokens") == 512
+
+    def test_generate_suggested_questions_uses_custom_temperature(self, mock_model_instance):
+        mock_response = MagicMock()
+        mock_response.message.get_text_content.return_value = '["Question 1?"]'
+        mock_model_instance.invoke_llm.return_value = mock_response
+
+        with patch("core.llm_generator.llm_generator.SUGGESTED_QUESTIONS_TEMPERATURE", 0.7):
+            LLMGenerator.generate_suggested_questions_after_answer("tenant_id", "histories")
+            call_kwargs = mock_model_instance.invoke_llm.call_args
+            assert call_kwargs is not None
+            model_parameters = call_kwargs.kwargs.get("model_parameters", {})
+            assert model_parameters.get("temperature") == 0.7
+
     def test_generate_rule_config_no_variable_success(self, mock_model_instance, model_config_entity):
         payload = RuleGeneratePayload(
             instruction="test instruction", model_config=model_config_entity, no_variable=True
